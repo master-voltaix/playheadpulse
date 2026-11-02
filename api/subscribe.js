@@ -6,6 +6,25 @@
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Saves the address in Postgres (Neon via Vercel Storage). Skipped if no database is connected.
+// Never throws: a database problem must not stop the email from being sent.
+async function saveSubscriber(email) {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) { console.warn('No DATABASE_URL, email not saved.'); return; }
+  try {
+    const { neon } = require('@neondatabase/serverless');
+    const sql = neon(url);
+    await sql`CREATE TABLE IF NOT EXISTS subscribers (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`;
+    await sql`INSERT INTO subscribers (email) VALUES (${email.toLowerCase()}) ON CONFLICT (email) DO NOTHING`;
+  } catch (e) {
+    console.error('Could not save subscriber', e);
+  }
+}
+
 const emailHtml = () => `<!doctype html><html><body style="margin:0;background:#f4f4f6;font-family:Inter,Arial,sans-serif;color:#0a0a0f">
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
 <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:24px;padding:36px">
@@ -26,6 +45,8 @@ module.exports = async (req, res) => {
 
   const key = process.env.RESEND_API_KEY;
   if (!key) return res.status(500).json({ error: 'Server has no RESEND_API_KEY.' });
+
+  await saveSubscriber(email);
 
   try {
     const r = await fetch('https://api.resend.com/emails', {
