@@ -1,66 +1,66 @@
 (() => {
-  const stage = document.getElementById('viz-stage');
-  if (!stage) return;
-  const barsEl = document.getElementById('viz-bars');
-  const ph = document.getElementById('viz-ph');
-  const tagsEl = document.getElementById('viz-tags');
-  const tc = document.getElementById('viz-tc');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const N = window.innerWidth >= 720 ? 64 : 42;
-  const bars = [];
-  for (let i = 0; i < N; i++) { const b = document.createElement('i'); barsEl.appendChild(b); bars.push(b); }
+  // Small deterministic waveform bars for the clips
+  const bars = (n, seed) => {
+    let s = seed, out = '';
+    for (let i = 0; i < n; i++) {
+      s = (s * 9301 + 49297) % 233280;
+      out += '<i style="--h:' + Math.round(25 + (s / 233280) * 75) + '%"></i>';
+    }
+    return out;
+  };
+  document.querySelectorAll('.lp-clip--s').forEach((c, i) => {
+    c.innerHTML = '<div class="wave">' + bars(10, 3 + i * 5) + '</div>';
+  });
+  const music = document.querySelector('.lp-clip--m');
+  if (music) music.innerHTML = '<div class="wave">' + bars(60, 17) + '</div>';
 
-  const names = [['Whoosh', 0.12], ['UI click', 0.31], ['Impact', 0.5], ['Pop', 0.68], ['Sparkle', 0.86]];
-  const tags = names.map(([label, pos]) => {
-    const el = document.createElement('span'); el.className = 'lp-viz__tag';
-    el.textContent = label + '.wav'; el.style.left = (pos * 100) + '%';
-    tagsEl.appendChild(el); return { el, pos, hit: false };
+  // Cut markers sit on the same scale as the clips
+  document.querySelectorAll('.lp-tl__cut').forEach((c) => {
+    c.style.setProperty('--x-n', parseFloat(c.style.getPropertyValue('--x')) / 100);
   });
 
-  const DUR = 7.5; // seconds per sweep
-  const pad = (n) => String(n).padStart(2, '0');
-  let w = 0;
-  const measure = () => { w = stage.clientWidth; };
-  measure(); window.addEventListener('resize', measure);
-
-  let prev = -1;
-  const draw = (t) => {
-    const x = (t % DUR) / DUR; // 0..1 playhead position
-    if (x < prev) tags.forEach((g) => { g.hit = false; });
-    prev = x;
-    ph.style.transform = 'translateX(' + (x * w) + 'px)';
-    for (let i = 0; i < N; i++) {
-      const p = i / (N - 1);
-      const base = 0.16 + 0.16 * (Math.sin(p * 9 + t * 1.6) * 0.5 + 0.5) + 0.06 * Math.sin(i * 1.7 + t * 2.4);
-      const d = Math.abs(p - x);
-      const near = Math.exp(-Math.pow(d * N / 4.2, 2));
-      const trail = p < x ? Math.exp(-(x - p) * 5) * 0.22 : 0;
-      const jit = 0.5 + 0.5 * Math.sin(t * 11 + i * 2.3);
-      const h = Math.min(1, base + trail + near * (0.5 + 0.35 * jit));
-      const b = bars[i];
-      b.style.transform = 'scaleY(' + h.toFixed(3) + ')';
-      const cls = d < 0.02 ? 'is-hot' : ((d < 0.07 || (p < x && p > x - 0.1)) ? 'is-lit' : '');
-      if (b.className !== cls) b.className = cls;
-    }
-    tags.forEach((g) => {
-      if (!g.hit && x >= g.pos && x < g.pos + 0.1) {
-        g.hit = true; g.el.classList.remove('is-hit'); void g.el.offsetWidth; g.el.classList.add('is-hit');
-      }
-    });
-    const total = Math.floor(x * 3 * 60 * 24); // fake timecode at 24 fps
-    tc.textContent = pad(Math.floor(total / 1440)) + ':' + pad(Math.floor((total % 1440) / 24)) + ':' + pad(total % 24);
+  // Steps: add is-in when the list scrolls into view (the theme script handles .reveal, this keeps the same class)
+  // Count up the category numbers once
+  const counts = document.querySelectorAll('[data-count]');
+  const runCount = (el) => {
+    const target = Number(el.dataset.count);
+    if (reduce) { el.textContent = target; return; }
+    const t0 = performance.now(), dur = 900;
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / dur);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    el.textContent = '0'; requestAnimationFrame(tick);
   };
-
-  if (reduce) { draw(DUR * 0.5); return; }
-
-  let raf = 0, start = 0, visible = true;
-  const loop = (ts) => { if (!start) start = ts; draw((ts - start) / 1000); raf = requestAnimationFrame(loop); };
-  const run = () => { if (!raf) { start = 0; raf = requestAnimationFrame(loop); } };
-  const stop = () => { cancelAnimationFrame(raf); raf = 0; };
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver((es) => { visible = es[0].isIntersecting; if (visible) run(); else stop(); }).observe(stage);
+    const io = new IntersectionObserver((es) => {
+      es.forEach((e) => { if (e.isIntersecting) { runCount(e.target); io.unobserve(e.target); } });
+    }, { threshold: 0.6 });
+    counts.forEach((c) => io.observe(c));
   }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else if (visible) run(); });
-  run();
+
+  // Timeline timecode follows the playhead (same 6s loop, starts after the 0.9s intro)
+  const tc = document.getElementById('tl-tc');
+  const tl = document.querySelector('.lp-tl');
+  if (tc && tl && !reduce) {
+    const pad = (n) => String(n).padStart(2, '0');
+    let t0 = 0, on = false;
+    const frame = (now) => {
+      if (!on) return;
+      if (!t0) t0 = now;
+      const t = Math.max(0, (now - t0) / 1000 - 0.9);
+      const x = (t % 6) / 6;
+      const total = Math.floor(x * 15 * 24); // 15 second reel at 24 fps
+      tc.textContent = '00:' + pad(Math.floor(total / 24)) + ':' + pad(total % 24);
+      requestAnimationFrame(frame);
+    };
+    new IntersectionObserver((es) => {
+      const vis = es[0].isIntersecting;
+      if (vis && !on) { on = true; t0 = 0; requestAnimationFrame(frame); }
+      if (!vis) on = false;
+    }).observe(tl);
+  }
 })();
