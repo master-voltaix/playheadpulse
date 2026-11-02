@@ -35,6 +35,21 @@ const emailHtml = () => `<!doctype html><html><body style="margin:0;background:#
 <tr><td style="padding-top:28px;font-size:13px;color:#8d8d99">WAV, 24-bit / 96 kHz, one sound per file.</td></tr>
 </table></td></tr></table></body></html>`;
 
+// Also adds the address to Resend Contacts so it shows up in the Resend dashboard.
+// Needs an API key with "Full access". Never throws: the email has already been sent.
+async function saveContact(email, key) {
+  try {
+    const r = await fetch('https://api.resend.com/contacts', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.toLowerCase(), unsubscribed: false })
+    });
+    if (!r.ok) console.error('Could not save Resend contact', r.status, await r.text().catch(() => ''));
+  } catch (e) {
+    console.error('Could not save Resend contact', e);
+  }
+}
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' });
 
@@ -65,6 +80,7 @@ module.exports = async (req, res) => {
       console.error('Resend error', r.status, data);
       return res.status(502).json({ error: data.message || 'Could not send the email.' });
     }
+    await saveContact(email, key);
     return res.status(200).json({ ok: true });
   } catch (e) {
     console.error(e);
