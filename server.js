@@ -72,8 +72,8 @@ http.createServer((req, res) => {
   }
 
   // Local only: serves the logo used in the email
-  if (req.method === 'GET' && url === '/email-assets/logo-light.png') {
-    return fs.readFile(path.join(__dirname, 'email-assets', 'logo-light.png'), (err, data) => {
+  if (req.method === 'GET' && url === '/email-assets/logo.png') {
+    return fs.readFile(path.join(__dirname, 'email-assets', 'logo.png'), (err, data) => {
       if (err) { res.writeHead(404); return res.end('Not found'); }
       res.writeHead(200, { 'Content-Type': 'image/png' });
       res.end(data);
