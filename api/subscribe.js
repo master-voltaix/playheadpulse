@@ -3,6 +3,9 @@
 // Environment variables (set in Vercel > Settings > Environment Variables):
 //   RESEND_API_KEY   your Resend key
 //   FROM_EMAIL       e.g. Playhead Pulse <hello@playheadpulse.com>  (domain must be verified in Resend)
+//   DOWNLOAD_URL     link to the free pack (optional, a default Dropbox link is built in)
+
+const { downloadUrl, emailHtml, emailText, SUBJECT } = require('./_email');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,16 +27,6 @@ async function saveSubscriber(email) {
     console.error('Could not save subscriber', e);
   }
 }
-
-const emailHtml = () => `<!doctype html><html><body style="margin:0;background:#f4f4f6;font-family:Inter,Arial,sans-serif;color:#0a0a0f">
-<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
-<table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:24px;padding:36px">
-<tr><td style="font-size:15px;font-weight:600;color:#5b2bf0">Playhead Pulse</td></tr>
-<tr><td style="padding-top:18px;font-size:30px;line-height:1.05;font-weight:600;letter-spacing:-0.04em">Your 73 free SFX are ready.</td></tr>
-<tr><td style="padding-top:14px;font-size:16px;line-height:1.55;color:#50505c">This is a test email from your landing page. In the live version, this email contains the download link to your free pack.</td></tr>
-<tr><td style="padding-top:26px"><a href="#" style="display:inline-block;background:#5b2bf0;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;padding:16px 28px;border-radius:999px">Download the pack</a></td></tr>
-<tr><td style="padding-top:28px;font-size:13px;color:#8d8d99">73 sounds in 12 categories. WAV, 24-bit / 96 kHz, one sound per file.</td></tr>
-</table></td></tr></table></body></html>`;
 
 // Spam limits (counted in Postgres, per device = IP address):
 //  - 60 second cooldown for the same device and for the same email
@@ -129,9 +122,9 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         from: process.env.FROM_EMAIL || 'Playhead Pulse <onboarding@resend.dev>',
         to: [email],
-        subject: 'Your 73 free SFX',
-        html: emailHtml(),
-        text: 'Your 73 free SFX are ready.'
+        subject: SUBJECT,
+        html: emailHtml(downloadUrl()),
+        text: emailText(downloadUrl())
       })
     });
     const data = await r.json().catch(() => ({}));
