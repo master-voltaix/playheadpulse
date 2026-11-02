@@ -7,8 +7,8 @@ b64 = lambda p: "data:image/webp;base64," + base64.b64encode((kit / p).read_byte
 sprite = (kit / "icons/sprite-inline.html").read_text(encoding="utf-8")
 theme = (kit / "css/theme.css").read_text(encoding="utf-8")
 base_js = (kit / "js/base.js").read_text(encoding="utf-8")
-page_css = (root / "src/page.css").read_text(encoding="utf-8")
-page_js = (root / "src/page.js").read_text(encoding="utf-8")
+page_css = (root / "src/page.css").read_text(encoding="utf-8") + (root / "src/viz.css").read_text(encoding="utf-8")
+page_js = (root / "src/page.js").read_text(encoding="utf-8") + chr(10) + (root / "src/viz.js").read_text(encoding="utf-8")
 body = (root / "src/body.html").read_text(encoding="utf-8").replace("{{LOGO}}", b64("img/logo.webp"))
 
 html = f"""<meta charset="utf-8">

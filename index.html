@@ -1474,6 +1474,29 @@ body { display: flex; flex-direction: column; min-height: 100svh; }
 
 .lp-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px var(--gutter) calc(16px + env(safe-area-inset-bottom)); font-size: .8rem; color: var(--ink-3); }
 .lp-foot a:hover { color: var(--ink); }
+/* Animated sound strip */
+.lp-main { flex-direction: column; justify-content: center; gap: 40px; }
+.lp-viz { width: 100%; max-width: 640px; margin-inline: auto; background: #000; color: #fff; border-radius: var(--r-lg); padding: 14px 14px 18px; overflow: hidden; isolation: isolate; }
+.lp-viz__top { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px 12px; font-size: .8rem; }
+.lp-viz__rec { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,.7); font-weight: 500; }
+.lp-viz__rec i { width: 8px; height: 8px; border-radius: 50%; background: #b7a3ff; box-shadow: 0 0 10px 2px rgba(150,120,255,.8); animation: vzBlink 1.2s ease-in-out infinite; }
+.lp-viz__tc { font-family: var(--font-mono); font-variant-numeric: tabular-nums; color: rgba(255,255,255,.6); }
+.lp-viz__stage { position: relative; height: clamp(190px, 52vw, 260px); border-radius: var(--r); background: #08070d; overflow: hidden; }
+.lp-viz__bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 3px; padding: 0 8px; }
+.lp-viz__bars i { flex: 1 1 0; height: 100%; min-width: 2px; border-radius: 999px 999px 0 0; background: #4a24c4; transform-origin: 50% 100%; transform: scaleY(.2); will-change: transform; }
+.lp-viz__bars i.is-lit { background: #8a63ff; box-shadow: 0 0 16px rgba(122,82,255,.85); }
+.lp-viz__bars i.is-hot { background: #e6dcff; box-shadow: 0 0 22px rgba(190,170,255,.95); }
+.lp-viz__ph { position: absolute; top: 0; bottom: 0; left: 0; width: 2px; margin-left: -1px; background: #fff; box-shadow: 0 0 14px rgba(255,255,255,.7); will-change: transform; }
+.lp-viz__ph::before { content: ""; position: absolute; top: 0; left: -5px; width: 12px; height: 12px; background: #fff; clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%); }
+.lp-viz__tags { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.lp-viz__tag { position: absolute; top: 18%; transform: translate(-50%, 8px) scale(.85); opacity: 0; padding: 6px 12px; border-radius: var(--r-pill); background: rgba(255,255,255,.12); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); font-family: var(--font-mono); font-size: 11.5px; color: #fff; white-space: nowrap; }
+.lp-viz__tag.is-hit { animation: vzTag 1.5s var(--ease-out) forwards; }
+.lp-viz__foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 6px 0; }
+.lp-viz__foot span { font-size: .78rem; font-weight: 500; padding: 5px 11px; border-radius: var(--r-pill); background: rgba(255,255,255,.08); color: rgba(255,255,255,.75); }
+@keyframes vzTag { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.8); } 18% { opacity: 1; transform: translate(-50%, 0) scale(1); } 70% { opacity: 1; transform: translate(-50%, -6px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -16px) scale(.97); } }
+@keyframes vzBlink { 50% { opacity: .35; } }
+@media (min-width: 720px) { .lp-viz { padding: 16px 16px 20px; } .lp-viz__bars { gap: 4px; } }
+@media (prefers-reduced-motion: reduce) { .lp-viz__rec i { animation: none; } }
 
 </style>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
@@ -1544,6 +1567,16 @@ body { display: flex; flex-direction: column; min-height: 100svh; }
       <p class="lead lp-lead">We sent the download link to <strong id="lp-addr"></strong>. It can take a minute to arrive. Check spam if you do not see it.</p>
       <button class="link lp-change" type="button" id="lp-change"><span>Wrong address? Change it</span><svg class="i-move" aria-hidden="true"><use href="#i-arrow"/></svg></button>
     </div>
+  </section>
+
+  <section class="lp-viz" id="lp-viz" aria-hidden="true">
+    <div class="lp-viz__top"><span class="lp-viz__rec"><i></i>Playing</span><span class="lp-viz__tc" id="viz-tc">00:00:00</span></div>
+    <div class="lp-viz__stage" id="viz-stage">
+      <div class="lp-viz__tags" id="viz-tags"></div>
+      <div class="lp-viz__bars" id="viz-bars"></div>
+      <div class="lp-viz__ph" id="viz-ph"></div>
+    </div>
+    <div class="lp-viz__foot"><span>50 sounds</span><span>WAV</span><span>24-bit / 96 kHz</span></div>
   </section>
 </main>
 
@@ -1633,5 +1666,72 @@ body { display: flex; flex-direction: column; min-height: 100svh; }
   });
 
   document.querySelectorAll('[data-year]').forEach((el) => { el.textContent = new Date().getFullYear(); });
+})();
+
+(() => {
+  const stage = document.getElementById('viz-stage');
+  if (!stage) return;
+  const barsEl = document.getElementById('viz-bars');
+  const ph = document.getElementById('viz-ph');
+  const tagsEl = document.getElementById('viz-tags');
+  const tc = document.getElementById('viz-tc');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const N = window.innerWidth >= 720 ? 64 : 42;
+  const bars = [];
+  for (let i = 0; i < N; i++) { const b = document.createElement('i'); barsEl.appendChild(b); bars.push(b); }
+
+  const names = [['Whoosh', 0.12], ['UI click', 0.31], ['Impact', 0.5], ['Pop', 0.68], ['Sparkle', 0.86]];
+  const tags = names.map(([label, pos]) => {
+    const el = document.createElement('span'); el.className = 'lp-viz__tag';
+    el.textContent = label + '.wav'; el.style.left = (pos * 100) + '%';
+    tagsEl.appendChild(el); return { el, pos, hit: false };
+  });
+
+  const DUR = 7.5; // seconds per sweep
+  const pad = (n) => String(n).padStart(2, '0');
+  let w = 0;
+  const measure = () => { w = stage.clientWidth; };
+  measure(); window.addEventListener('resize', measure);
+
+  let prev = -1;
+  const draw = (t) => {
+    const x = (t % DUR) / DUR; // 0..1 playhead position
+    if (x < prev) tags.forEach((g) => { g.hit = false; });
+    prev = x;
+    ph.style.transform = 'translateX(' + (x * w) + 'px)';
+    for (let i = 0; i < N; i++) {
+      const p = i / (N - 1);
+      const base = 0.16 + 0.16 * (Math.sin(p * 9 + t * 1.6) * 0.5 + 0.5) + 0.06 * Math.sin(i * 1.7 + t * 2.4);
+      const d = Math.abs(p - x);
+      const near = Math.exp(-Math.pow(d * N / 4.2, 2));
+      const trail = p < x ? Math.exp(-(x - p) * 5) * 0.22 : 0;
+      const jit = 0.5 + 0.5 * Math.sin(t * 11 + i * 2.3);
+      const h = Math.min(1, base + trail + near * (0.5 + 0.35 * jit));
+      const b = bars[i];
+      b.style.transform = 'scaleY(' + h.toFixed(3) + ')';
+      const cls = d < 0.02 ? 'is-hot' : ((d < 0.07 || (p < x && p > x - 0.1)) ? 'is-lit' : '');
+      if (b.className !== cls) b.className = cls;
+    }
+    tags.forEach((g) => {
+      if (!g.hit && x >= g.pos && x < g.pos + 0.1) {
+        g.hit = true; g.el.classList.remove('is-hit'); void g.el.offsetWidth; g.el.classList.add('is-hit');
+      }
+    });
+    const total = Math.floor(x * 3 * 60 * 24); // fake timecode at 24 fps
+    tc.textContent = pad(Math.floor(total / 1440)) + ':' + pad(Math.floor((total % 1440) / 24)) + ':' + pad(total % 24);
+  };
+
+  if (reduce) { draw(DUR * 0.5); return; }
+
+  let raf = 0, start = 0, visible = true;
+  const loop = (ts) => { if (!start) start = ts; draw((ts - start) / 1000); raf = requestAnimationFrame(loop); };
+  const run = () => { if (!raf) { start = 0; raf = requestAnimationFrame(loop); } };
+  const stop = () => { cancelAnimationFrame(raf); raf = 0; };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((es) => { visible = es[0].isIntersecting; if (visible) run(); else stop(); }).observe(stage);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); else if (visible) run(); });
+  run();
 })();
 </script>
