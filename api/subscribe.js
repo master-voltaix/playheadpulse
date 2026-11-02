@@ -29,10 +29,10 @@ const emailHtml = () => `<!doctype html><html><body style="margin:0;background:#
 <table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">
 <table width="520" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:24px;padding:36px">
 <tr><td style="font-size:15px;font-weight:600;color:#5b2bf0">Playhead Pulse</td></tr>
-<tr><td style="padding-top:18px;font-size:30px;line-height:1.05;font-weight:600;letter-spacing:-0.04em">Your 50 free SFX are ready.</td></tr>
+<tr><td style="padding-top:18px;font-size:30px;line-height:1.05;font-weight:600;letter-spacing:-0.04em">Your 73 free SFX are ready.</td></tr>
 <tr><td style="padding-top:14px;font-size:16px;line-height:1.55;color:#50505c">This is a test email from your landing page. In the live version, this email contains the download link to your free pack.</td></tr>
 <tr><td style="padding-top:26px"><a href="#" style="display:inline-block;background:#5b2bf0;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;padding:16px 28px;border-radius:999px">Download the pack</a></td></tr>
-<tr><td style="padding-top:28px;font-size:13px;color:#8d8d99">WAV, 24-bit / 96 kHz, one sound per file.</td></tr>
+<tr><td style="padding-top:28px;font-size:13px;color:#8d8d99">73 sounds in 12 categories. WAV, 24-bit / 96 kHz, one sound per file.</td></tr>
 </table></td></tr></table></body></html>`;
 
 // Spam limits (counted in Postgres, per device = IP address):
@@ -129,9 +129,9 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         from: process.env.FROM_EMAIL || 'Playhead Pulse <onboarding@resend.dev>',
         to: [email],
-        subject: 'Your 50 free SFX',
+        subject: 'Your 73 free SFX',
         html: emailHtml(),
-        text: 'Your 50 free SFX are ready.'
+        text: 'Your 73 free SFX are ready.'
       })
     });
     const data = await r.json().catch(() => ({}));

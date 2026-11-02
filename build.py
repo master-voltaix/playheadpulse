@@ -13,8 +13,8 @@ body = (root / "src/body.html").read_text(encoding="utf-8").replace("{{LOGO}}", 
 
 html = f"""<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>50 Free Premium SFX | Playhead Pulse</title>
-<meta name="description" content="Get 50 free premium SFX sound effects from Playhead Pulse. Enter your email and we send you the download link.">
+<title>73 Free Premium SFX | Playhead Pulse</title>
+<meta name="description" content="Get 73 free premium SFX sound effects from Playhead Pulse. Enter your email and we send you the download link.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..800&family=Geist+Mono:wght@400;500&display=swap">
 <style>
 :root {{ color-scheme: light; }}
