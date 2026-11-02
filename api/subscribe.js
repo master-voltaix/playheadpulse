@@ -35,6 +35,58 @@ const emailHtml = () => `<!doctype html><html><body style="margin:0;background:#
 <tr><td style="padding-top:28px;font-size:13px;color:#8d8d99">WAV, 24-bit / 96 kHz, one sound per file.</td></tr>
 </table></td></tr></table></body></html>`;
 
+// Spam limits (counted in Postgres, per device = IP address):
+//  - 60 second cooldown for the same device and for the same email
+//  - max 3 requests per email in 24 hours
+//  - max 3 different emails per device in 24 hours
+// Returns null if allowed (and records the attempt), or { error, retryAfter } if blocked.
+// If the database is unavailable the request is allowed, so a database problem never blocks real users.
+const COOLDOWN_SEC = 60;
+const MAX_PER_EMAIL = 3;
+const MAX_EMAILS_PER_DEVICE = 3;
+
+async function checkLimits(email, ip) {
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!url) return null;
+  try {
+    const { neon } = require('@neondatabase/serverless');
+    const sql = neon(url);
+    await sql`CREATE TABLE IF NOT EXISTS signup_attempts (
+      id SERIAL PRIMARY KEY,
+      email TEXT NOT NULL,
+      ip TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )`;
+
+    // 1. cooldown: last attempt from this device or for this email
+    const last = await sql`SELECT EXTRACT(EPOCH FROM (now() - max(created_at))) AS age
+      FROM signup_attempts WHERE (ip = ${ip} OR email = ${email}) AND created_at > now() - interval '60 seconds'`;
+    const age = last[0] && last[0].age !== null ? Number(last[0].age) : null;
+    if (age !== null) {
+      return { error: 'Please wait a moment before trying again.', retryAfter: Math.max(1, Math.ceil(COOLDOWN_SEC - age)) };
+    }
+
+    // 2. same email too often
+    const perEmail = await sql`SELECT count(*)::int AS n FROM signup_attempts WHERE email = ${email} AND created_at > now() - interval '24 hours'`;
+    if (perEmail[0].n >= MAX_PER_EMAIL) {
+      return { error: 'This email already received the pack 3 times. Check your inbox and spam folder.', retryAfter: 0 };
+    }
+
+    // 3. one device, too many different emails
+    const perDevice = await sql`SELECT count(DISTINCT email)::int AS n FROM signup_attempts WHERE ip = ${ip} AND created_at > now() - interval '24 hours'`;
+    const known = await sql`SELECT 1 FROM signup_attempts WHERE ip = ${ip} AND email = ${email} AND created_at > now() - interval '24 hours' LIMIT 1`;
+    if (perDevice[0].n >= MAX_EMAILS_PER_DEVICE && known.length === 0) {
+      return { error: 'Too many requests from this device. Try again tomorrow.', retryAfter: 0 };
+    }
+
+    await sql`INSERT INTO signup_attempts (email, ip) VALUES (${email}, ${ip})`;
+    return null;
+  } catch (e) {
+    console.error('Limit check failed, allowing request', e);
+    return null;
+  }
+}
+
 // Also adds the address to Resend Contacts so it shows up in the Resend dashboard.
 // Needs an API key with "Full access". Never throws: the email has already been sent.
 async function saveContact(email, key) {
@@ -60,6 +112,13 @@ module.exports = async (req, res) => {
 
   const key = process.env.RESEND_API_KEY;
   if (!key) return res.status(500).json({ error: 'Server has no RESEND_API_KEY.' });
+
+  const ip = String(req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+  const blocked = await checkLimits(email.toLowerCase(), ip);
+  if (blocked) {
+    if (blocked.retryAfter) res.setHeader('Retry-After', String(blocked.retryAfter));
+    return res.status(429).json({ error: blocked.error, retryAfter: blocked.retryAfter || 0 });
+  }
 
   await saveSubscriber(email);
 
