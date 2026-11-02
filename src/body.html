@@ -1,0 +1,37 @@
+<header class="lp-top">
+  <a class="logo" href="#" aria-label="Playhead Pulse"><img src="{{LOGO}}" width="900" height="128" alt="Playhead Pulse"></a>
+</header>
+
+<main class="lp-main">
+  <section class="lp-card" id="signup">
+    <div class="lp-step" data-step="form">
+      <p class="eyebrow">Free download</p>
+      <h1 class="hero__title lp-title">Get 50 free<br>premium SFX.</h1>
+      <p class="lead lp-lead">Enter your email and we send the download link straight to your inbox.</p>
+
+      <form class="lp-form" id="lp-form" novalidate>
+        <label class="visually-hidden" for="email">Email</label>
+        <input id="email" type="email" name="email" placeholder="Your email" autocomplete="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" required>
+        <button class="btn btn--primary lp-btn" type="submit"><span class="lp-btn__label">Send me the pack</span><svg class="i-move" aria-hidden="true"><use href="#i-arrow"/></svg><i class="lp-btn__bar" aria-hidden="true"></i></button>
+      </form>
+      <p class="lp-error" id="lp-error" role="status" aria-live="polite"></p>
+      <p class="lp-hint"><svg aria-hidden="true"><use href="#i-shield"/></svg>The pack is sent to this address. Double-check it is correct.</p>
+    </div>
+
+    <div class="lp-step lp-sent" data-step="sent" hidden aria-live="polite">
+      <div class="lp-env" aria-hidden="true">
+        <span class="lp-env__trail"></span>
+        <svg class="lp-env__icon"><use href="#p-inbox"/></svg>
+        <svg class="lp-env__ok"><use href="#c-success"/></svg>
+      </div>
+      <h2 class="hero__title lp-title lp-title--sm">Check your inbox.</h2>
+      <p class="lead lp-lead">We sent the download link to <strong id="lp-addr"></strong>. It can take a minute to arrive. Check spam if you do not see it.</p>
+      <button class="link lp-change" type="button" id="lp-change"><span>Wrong address? Change it</span><svg class="i-move" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    </div>
+  </section>
+</main>
+
+<footer class="lp-foot">
+  <span>&copy; <span data-year>2026</span> Playhead Pulse</span>
+  <span><a href="#">Imprint</a> &nbsp; <a href="#">Privacy</a></span>
+</footer>

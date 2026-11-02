@@ -1,0 +1,51 @@
+/* One screen: logo, title, email field. Everything else comes from theme.css */
+body { display: flex; flex-direction: column; min-height: 100svh; }
+.lp-top { display: flex; align-items: center; height: var(--header-h); padding-inline: var(--gutter); }
+.lp-top .logo img { height: 24px; width: auto; }
+.lp-main { flex: 1; display: flex; align-items: center; padding: 16px var(--gutter) 32px; }
+.lp-card { width: 100%; max-width: 640px; margin-inline: auto; }
+.lp-step[hidden] { display: none; }
+
+.lp-title { font-size: clamp(2.7rem, 11.5vw, 5.6rem); line-height: .95; letter-spacing: -0.05em; }
+.lp-title--sm { font-size: clamp(2.2rem, 9vw, 3.6rem); }
+.lp-lead { margin-top: 18px; max-width: 34ch; }
+.lp-lead strong { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+
+.lp-form { display: flex; flex-direction: column; gap: 8px; margin-top: 28px; }
+.lp-form input { width: 100%; height: 58px; padding: 0 22px; border: 0; outline: none; border-radius: var(--r-pill); background: var(--surface); color: var(--ink); font-size: 16px; transition: box-shadow .2s var(--ease); }
+.lp-form input::placeholder { color: var(--ink-3); }
+.lp-form input:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); }
+.lp-form input.is-bad { box-shadow: inset 0 0 0 2px #c0262d; }
+.lp-btn { position: relative; width: 100%; height: 58px; overflow: hidden; font-size: 1rem; }
+.lp-btn[disabled] { cursor: default; }
+.lp-btn[disabled]:hover { --bg-c: var(--accent); }
+.lp-btn__bar { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: #fff; opacity: .9; }
+.lp-btn.is-sending .lp-btn__bar { animation: lpBar 1.4s var(--ease) forwards; }
+.lp-btn.is-sending svg { display: none; }
+@keyframes lpBar { to { width: 100%; } }
+@media (min-width: 720px) {
+  .lp-form { flex-direction: row; gap: 6px; }
+  .lp-form input { flex: 1 1 auto; width: auto; }
+  .lp-btn { width: auto; flex: 0 0 auto; padding: 0 30px; }
+}
+
+.lp-error { margin-top: 10px; font-size: .9rem; color: #c0262d; }
+.lp-error:empty { display: none; }
+.lp-hint { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: .88rem; color: var(--ink-2); }
+.lp-hint svg { width: 18px; height: 18px; flex: none; color: var(--accent); }
+
+/* Sent state: envelope flies in, check pops */
+.lp-env { position: relative; width: 84px; height: 84px; margin-bottom: 26px; }
+.lp-env__icon { position: absolute; inset: 0; width: 84px; height: 84px; padding: 14px; border-radius: 26px; background: var(--accent-soft); animation: lpFly .9s var(--ease-out) both; }
+.lp-env__trail { position: absolute; left: -64px; top: 50%; width: 56px; height: 3px; margin-top: -1.5px; border-radius: 3px; background: var(--accent); opacity: 0; animation: lpTrail .9s var(--ease-out) both; }
+.lp-env__ok { position: absolute; right: -10px; bottom: -10px; width: 36px; height: 36px; border-radius: 50%; background: #fff; transform: scale(0); animation: lpPop .5s .75s var(--ease-out) forwards; }
+.lp-sent .lp-title, .lp-sent .lp-lead, .lp-sent .lp-change { animation: lpUp .7s .5s var(--ease-out) both; }
+.lp-sent .lp-lead { animation-delay: .6s; }
+.lp-sent .lp-change { animation-delay: .75s; margin-top: 22px; }
+@keyframes lpFly { from { transform: translateX(-90px) scale(.7); opacity: 0; } 60% { opacity: 1; } to { transform: none; opacity: 1; } }
+@keyframes lpTrail { 0% { opacity: 0; transform: scaleX(.2); transform-origin: right; } 40% { opacity: 1; transform: scaleX(1); } 100% { opacity: 0; transform: scaleX(1); } }
+@keyframes lpPop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes lpUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+.lp-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px var(--gutter) calc(16px + env(safe-area-inset-bottom)); font-size: .8rem; color: var(--ink-3); }
+.lp-foot a:hover { color: var(--ink); }
