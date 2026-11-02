@@ -63,6 +63,23 @@ http.createServer((req, res) => {
     return;
   }
 
+  // Local only: shows the email exactly as it is sent, reloads with every change to api/_email.js
+  if (req.method === 'GET' && url === '/email-preview') {
+    delete require.cache[require.resolve('./api/_email')];
+    const mail = require('./api/_email');
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(mail.emailHtml(mail.downloadUrl(), 'http://localhost:' + PORT));
+  }
+
+  // Local only: serves the logo used in the email
+  if (req.method === 'GET' && url === '/email-assets/logo-light.png') {
+    return fs.readFile(path.join(__dirname, 'email-assets', 'logo-light.png'), (err, data) => {
+      if (err) { res.writeHead(404); return res.end('Not found'); }
+      res.writeHead(200, { 'Content-Type': 'image/png' });
+      res.end(data);
+    });
+  }
+
   if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
     fs.readFile(path.join(__dirname, 'index.html'), (err, data) => {
       if (err) { res.writeHead(500); return res.end('index.html missing. Run: python build.py'); }
