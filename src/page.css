@@ -49,3 +49,5 @@ body { display: flex; flex-direction: column; min-height: 100svh; }
 
 .lp-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 16px var(--gutter) calc(16px + env(safe-area-inset-bottom)); font-size: .8rem; color: var(--ink-3); }
 .lp-foot a:hover { color: var(--ink); }
+
+.lp-hint strong { color: var(--ink); font-weight: 600; }
